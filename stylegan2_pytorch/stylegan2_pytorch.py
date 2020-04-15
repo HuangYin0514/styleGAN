@@ -27,11 +27,11 @@ from pathlib import Path
 from utils.utils import *
 from datasets.Datasets import *
 from datasets.Datasets import *
-from  model.Conv2DMod import *
-from   model.Generator import *
-from   model.Discriminator import *
-from   model.StyleVectorizer import *
-from  model.Stylegan import *
+from model.Conv2DMod import *
+from model.Generator import *
+from model.Discriminator import *
+from model.StyleVectorizer import *
+from model.Stylegan import *
 
 # assert torch.cuda.is_available(), 'You need to have an Nvidia GPU with CUDA installed.'
 
@@ -44,12 +44,28 @@ device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 # speed up
 cudnn.benchmark = True
 
+
 class NanException(Exception):
     pass
 
 
 class Trainer():
-    def __init__(self, name, results_dir, models_dir, image_size, network_capacity, transparent = False, batch_size = 4, mixed_prob = 0.9, gradient_accumulate_every=1, lr = 2e-4, num_workers = None, save_every = 1000, trunc_psi = 0.6, *args, **kwargs):
+    def __init__(self,
+                 name,
+                 results_dir,
+                 models_dir,
+                 image_size,
+                 network_capacity,
+                 transparent=False,
+                 batch_size=4,
+                 mixed_prob=0.9,
+                 gradient_accumulate_every=1,
+                 lr=2e-4,
+                 num_workers=None,
+                 save_every=1000,
+                 trunc_psi=0.6,
+                 *args,
+                 **kwargs):
         self.GAN_params = [args, kwargs]
         self.GAN = None
 
@@ -58,7 +74,8 @@ class Trainer():
         self.models_dir = Path(models_dir)
         self.config_path = self.models_dir / name / '.config.json'
 
-        assert log2(image_size).is_integer(), 'image size must be a power of 2 (64, 128, 256, 512, 1024)'
+        assert log2(image_size).is_integer(
+        ), 'image size must be a power of 2 (64, 128, 256, 512, 1024)'
         self.image_size = image_size
         self.network_capacity = network_capacity
         self.transparent = transparent
@@ -89,14 +106,21 @@ class Trainer():
 
     def init_GAN(self):
         args, kwargs = self.GAN_params
-        self.GAN = StyleGAN2(lr=self.lr, image_size = self.image_size, network_capacity = self.network_capacity, transparent = self.transparent, *args, **kwargs)
+        self.GAN = StyleGAN2(lr=self.lr,
+                             image_size=self.image_size,
+                             network_capacity=self.network_capacity,
+                             transparent=self.transparent,
+                             *args,
+                             **kwargs)
         self.GAN.to(device)
 
     def write_config(self):
         self.config_path.write_text(json.dumps(self.config()))
 
     def load_config(self):
-        config = self.config() if not self.config_path.exists() else json.loads(self.config_path.read_text())
+        config = self.config(
+        ) if not self.config_path.exists() else json.loads(
+            self.config_path.read_text())
         self.image_size = config['image_size']
         self.network_capacity = config['network_capacity']
         self.transparent = config['transparent']
@@ -105,11 +129,23 @@ class Trainer():
         self.init_GAN()
 
     def config(self):
-        return {'image_size': self.image_size, 'network_capacity': self.network_capacity, 'transparent': self.transparent}
+        return {
+            'image_size': self.image_size,
+            'network_capacity': self.network_capacity,
+            'transparent': self.transparent
+        }
 
     def set_data_src(self, folder):
-        self.dataset = Dataset(folder, self.image_size, transparent = self.transparent)
-        self.loader = cycle(data.DataLoader(self.dataset, num_workers = default(self.num_workers, num_cores), batch_size = self.batch_size, drop_last = True, shuffle=True, pin_memory=True))
+        self.dataset = Dataset(folder,
+                               self.image_size,
+                               transparent=self.transparent)
+        self.loader = cycle(
+            data.DataLoader(self.dataset,
+                            num_workers=default(self.num_workers, num_cores),
+                            batch_size=self.batch_size,
+                            drop_last=True,
+                            shuffle=True,
+                            pin_memory=True))
 
     def train(self):
         assert self.loader is not None, 'You must first initialize the data source with `.set_data_src(<folder of images>)`'
@@ -136,7 +172,8 @@ class Trainer():
         self.GAN.D_opt.zero_grad()
 
         for i in range(self.gradient_accumulate_every):
-            get_latents_fn = mixed_list if random() < self.mixed_prob else noise_list
+            get_latents_fn = mixed_list if random(
+            ) < self.mixed_prob else noise_list
             style = get_latents_fn(batch_size, num_layers, latent_dim)
             noise = image_noise(batch_size, image_size)
 
@@ -150,7 +187,8 @@ class Trainer():
             image_batch.requires_grad_()
             real_output = self.GAN.D(image_batch)
 
-            divergence = (F.relu(1 + real_output) + F.relu(1 - fake_output)).mean()
+            divergence = (F.relu(1 + real_output) +
+                          F.relu(1 - fake_output)).mean()
             disc_loss = divergence
 
             if apply_gradient_penalty:
@@ -162,7 +200,8 @@ class Trainer():
             disc_loss.register_hook(raise_if_nan)
             disc_loss.backward()
 
-            total_disc_loss += divergence.detach().item() / self.gradient_accumulate_every
+            total_disc_loss += divergence.detach().item(
+            ) / self.gradient_accumulate_every
 
         self.d_loss = float(total_disc_loss)
         self.GAN.D_opt.step()
@@ -183,14 +222,17 @@ class Trainer():
             gen_loss = loss
 
             if apply_path_penalty:
-                std = 0.1 / (w_styles.std(dim = 0, keepdim = True) + EPS)
-                w_styles_2 = w_styles + torch.randn(w_styles.shape).to(device) / (std + EPS)
+                std = 0.1 / (w_styles.std(dim=0, keepdim=True) + EPS)
+                w_styles_2 = w_styles + \
+                    torch.randn(w_styles.shape).to(device) / (std + EPS)
                 pl_images = self.GAN.G(w_styles_2, noise)
-                pl_lengths = ((pl_images - generated_images) ** 2).mean(dim = (1, 2, 3))
+                pl_lengths = ((pl_images - generated_images)**2).mean(dim=(1,
+                                                                           2,
+                                                                           3))
                 avg_pl_length = np.mean(pl_lengths.detach().cpu().numpy())
 
                 if self.pl_mean is not None:
-                    pl_loss = ((pl_lengths - self.pl_mean) ** 2).mean()
+                    pl_loss = ((pl_lengths - self.pl_mean)**2).mean()
                     if not torch.isnan(pl_loss):
                         gen_loss = gen_loss + pl_loss
 
@@ -198,7 +240,8 @@ class Trainer():
             gen_loss.register_hook(raise_if_nan)
             gen_loss.backward()
 
-            total_gen_loss += loss.detach().item() / self.gradient_accumulate_every
+            total_gen_loss += loss.detach().item(
+            ) / self.gradient_accumulate_every
 
         self.g_loss = float(total_gen_loss)
         self.GAN.G_opt.step()
@@ -206,7 +249,8 @@ class Trainer():
         # calculate moving averages
 
         if apply_path_penalty and not np.isnan(avg_pl_length):
-            self.pl_mean = self.pl_length_ma.update_average(self.pl_mean, avg_pl_length)
+            self.pl_mean = self.pl_length_ma.update_average(
+                self.pl_mean, avg_pl_length)
 
         if self.steps % 10 == 0 and self.steps > 20000:
             self.GAN.EMA()
@@ -219,7 +263,9 @@ class Trainer():
         checkpoint_num = floor(self.steps / self.save_every)
 
         if any(torch.isnan(l) for l in (total_gen_loss, total_disc_loss)):
-            print(f'NaN detected for generator or discriminator. Loading from checkpoint #{checkpoint_num}')
+            print(
+                f'NaN detected for generator or discriminator. Loading from checkpoint #{checkpoint_num}'
+            )
             self.load(checkpoint_num)
             raise NanException
 
@@ -228,14 +274,15 @@ class Trainer():
         if self.steps % self.save_every == 0:
             self.save(checkpoint_num)
 
-        if self.steps % 1000 == 0 or (self.steps % 100 == 0 and self.steps < 2500):
+        if self.steps % 1000 == 0 or (self.steps % 100 == 0
+                                      and self.steps < 2500):
             self.evaluate(floor(self.steps / 1000))
 
         self.steps += 1
         self.av = None
 
     @torch.no_grad()
-    def evaluate(self, num = 0, num_image_tiles = 8, trunc = 1.0):
+    def evaluate(self, num=0, num_image_tiles=8, trunc=1.0):
         self.GAN.eval()
         ext = 'jpg' if not self.transparent else 'png'
         num_rows = num_image_tiles
@@ -243,28 +290,39 @@ class Trainer():
         def generate_images(stylizer, generator, latents, noise):
             w = latent_to_w(stylizer, latents)
             w_styles = styles_def_to_tensor(w)
-            generated_images = evaluate_in_chunks(self.batch_size, generator, w_styles, noise)
+            generated_images = evaluate_in_chunks(self.batch_size, generator,
+                                                  w_styles, noise)
             generated_images.clamp_(0., 1.)
             return generated_images
-    
+
         latent_dim = self.GAN.G.latent_dim
         image_size = self.GAN.G.image_size
         num_layers = self.GAN.G.num_layers
 
         # latents and noise
 
-        latents = noise_list(num_rows ** 2, num_layers, latent_dim)
-        n = image_noise(num_rows ** 2, image_size)
+        latents = noise_list(num_rows**2, num_layers, latent_dim)
+        n = image_noise(num_rows**2, image_size)
 
         # regular
 
         generated_images = generate_images(self.GAN.S, self.GAN.G, latents, n)
-        torchvision.utils.save_image(generated_images, str(self.results_dir / self.name / f'{str(num)}.{ext}'), nrow=num_rows)
-        
+        torchvision.utils.save_image(generated_images,
+                                     str(self.results_dir / self.name /
+                                         f'{str(num)}.{ext}'),
+                                     nrow=num_rows)
+
         # moving averages
 
-        generated_images = self.generate_truncated(self.GAN.SE, self.GAN.GE, latents, n, trunc_psi = self.trunc_psi)
-        torchvision.utils.save_image(generated_images, str(self.results_dir / self.name / f'{str(num)}-ema.{ext}'), nrow=num_rows)
+        generated_images = self.generate_truncated(self.GAN.SE,
+                                                   self.GAN.GE,
+                                                   latents,
+                                                   n,
+                                                   trunc_psi=self.trunc_psi)
+        torchvision.utils.save_image(generated_images,
+                                     str(self.results_dir / self.name /
+                                         f'{str(num)}-ema.{ext}'),
+                                     nrow=num_rows)
 
         # mixing regularities
 
@@ -273,7 +331,10 @@ class Trainer():
             repeat_idx = [1] * a.dim()
             repeat_idx[dim] = n_tile
             a = a.repeat(*(repeat_idx))
-            order_index = torch.LongTensor(np.concatenate([init_dim * np.arange(n_tile) + i for i in range(init_dim)])).to(device)
+            order_index = torch.LongTensor(
+                np.concatenate([
+                    init_dim * np.arange(n_tile) + i for i in range(init_dim)
+                ])).to(device)
             return torch.index_select(a, dim, order_index)
 
         nn = noise(num_rows, latent_dim)
@@ -283,19 +344,32 @@ class Trainer():
         tt = int(num_layers / 2)
         mixed_latents = [(tmp1, tt), (tmp2, num_layers - tt)]
 
-        generated_images = self.generate_truncated(self.GAN.SE, self.GAN.GE, mixed_latents, n, trunc_psi = self.trunc_psi)
-        torchvision.utils.save_image(generated_images, str(self.results_dir / self.name / f'{str(num)}-mr.{ext}'), nrow=num_rows)
+        generated_images = self.generate_truncated(self.GAN.SE,
+                                                   self.GAN.GE,
+                                                   mixed_latents,
+                                                   n,
+                                                   trunc_psi=self.trunc_psi)
+        torchvision.utils.save_image(generated_images,
+                                     str(self.results_dir / self.name /
+                                         f'{str(num)}-mr.{ext}'),
+                                     nrow=num_rows)
 
     @torch.no_grad()
-    def generate_truncated(self, S, G, style, noi, trunc_psi = 0.6, num_image_tiles = 8):
+    def generate_truncated(self,
+                           S,
+                           G,
+                           style,
+                           noi,
+                           trunc_psi=0.6,
+                           num_image_tiles=8):
         latent_dim = G.latent_dim
 
         if self.av is None:
             z = noise(2000, latent_dim)
             samples = evaluate_in_chunks(self.batch_size, S, z).cpu().numpy()
-            self.av = np.mean(samples, axis = 0)
-            self.av = np.expand_dims(self.av, axis = 0)
-            
+            self.av = np.mean(samples, axis=0)
+            self.av = np.expand_dims(self.av, axis=0)
+
         w_space = []
         for tensor, num_layers in style:
             tmp = S(tensor)
@@ -304,11 +378,14 @@ class Trainer():
             w_space.append((tmp, num_layers))
 
         w_styles = styles_def_to_tensor(w_space)
-        generated_images = evaluate_in_chunks(self.batch_size, G, w_styles, noi)
+        generated_images = evaluate_in_chunks(self.batch_size, G, w_styles,
+                                              noi)
         return generated_images.clamp_(0., 1.)
 
     def print_log(self):
-        print(f'G: {self.g_loss:.2f} | D: {self.d_loss:.2f} | GP: {self.last_gp_loss:.2f} | PL: {self.pl_mean:.2f}')
+        print(
+            f'G: {self.g_loss:.2f} | D: {self.d_loss:.2f} | GP: {self.last_gp_loss:.2f} | PL: {self.pl_mean:.2f}'
+        )
 
     def model_name(self, num):
         return str(self.models_dir / self.name / f'model_{num}.pt')
@@ -327,13 +404,16 @@ class Trainer():
         torch.save(self.GAN.state_dict(), self.model_name(num))
         self.write_config()
 
-    def load(self, num = -1):
+    def load(self, num=-1):
         self.load_config()
 
         name = num
         if num == -1:
-            file_paths = [p for p in Path(self.models_dir / self.name).glob('model_*.pt')]
-            saved_nums = sorted(map(lambda x: int(x.stem.split('_')[1]), file_paths))
+            file_paths = [
+                p for p in Path(self.models_dir / self.name).glob('model_*.pt')
+            ]
+            saved_nums = sorted(
+                map(lambda x: int(x.stem.split('_')[1]), file_paths))
             if len(saved_nums) == 0:
                 return
             name = saved_nums[-1]
