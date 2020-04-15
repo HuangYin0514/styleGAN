@@ -409,6 +409,7 @@ class Trainer():
 
         name = num
         if num == -1:
+
             file_paths = [
                 p for p in Path(self.models_dir / self.name).glob('model_*.pt')
             ]
@@ -419,4 +420,8 @@ class Trainer():
             name = saved_nums[-1]
             print(f'continuing from previous epoch - {name}')
         self.steps = name * self.save_every
-        self.GAN.load_state_dict(torch.load(self.model_name(name)))
+        load_model_name = f'model_{name}.pt'
+        self.GAN.load_state_dict(
+            torch.load(load_model_name,
+                       map_location=torch.device(device)))
+        print(load_model_name)

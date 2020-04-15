@@ -6,7 +6,7 @@ from stylegan2_pytorch import Trainer, NanException
 from datetime import datetime
 
 
-def train_from_folder(data='../gan/custom_dataset',
+def train_from_folder(data='../../gan/custom_dataset',
                       results_dir='./GoodResult/results',
                       models_dir='./GoodResult/models',
                       name='mytest',
