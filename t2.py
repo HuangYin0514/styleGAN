@@ -1,12 +1,19 @@
 
-from tqdm import tqdm
-from datetime import datetime
-import time
+def test_kwargs(first, *args, **kwargs):
+    print('Required argument: ', first)
+    print(args)
+    for v in args:
+        print('Optional argument (*args): ', v)
+    print(kwargs)
+    for k, v in kwargs.items():
+        print('Optional argument %s (*kwargs): %s' % (k, v))
 
-train_now = datetime.now().timestamp()
-print(train_now)
-for _ in tqdm(range(100000), mininterval=0.000000001, desc=f'lalala'):
-    print(_)
-    if _ % 10 == 0:
-        if datetime.now().timestamp() - train_now > 10:
-            break
+
+test_kwargs(1, 2, 3, 4, k1=5, k2=6)
+
+
+print({
+    'a':1,
+    'b':2
+}.items())
+
