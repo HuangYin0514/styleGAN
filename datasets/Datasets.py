@@ -64,5 +64,3 @@ class Dataset(data.Dataset):
         path = self.paths[index]
         img = Image.open(path)
         return self.transform(img)
-
-# stylegan2 classes
