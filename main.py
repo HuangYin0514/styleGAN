@@ -67,4 +67,3 @@ def train_from_folder(data='../../gan/custom_dataset',
 
 if __name__ == "__main__":
     fire.Fire(train_from_folder)
-    print('abc')
