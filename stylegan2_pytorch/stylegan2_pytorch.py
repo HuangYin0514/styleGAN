@@ -305,7 +305,6 @@ class Trainer():
         n = image_noise(num_rows**2, image_size)
 
         # regular
-
         generated_images = generate_images(self.GAN.S, self.GAN.G, latents, n)
         torchvision.utils.save_image(generated_images,
                                      str(self.results_dir / self.name /
@@ -313,7 +312,6 @@ class Trainer():
                                      nrow=num_rows)
 
         # moving averages
-
         generated_images = self.generate_truncated(self.GAN.SE,
                                                    self.GAN.GE,
                                                    latents,
@@ -325,7 +323,6 @@ class Trainer():
                                      nrow=num_rows)
 
         # mixing regularities
-
         def tile(a, dim, n_tile):
             init_dim = a.size(dim)
             repeat_idx = [1] * a.dim()
