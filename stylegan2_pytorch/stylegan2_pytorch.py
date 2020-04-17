@@ -1,3 +1,5 @@
+from model.Stylegan import StyleGAN2
+from datasets.Datasets import Dataset
 import json
 from math import floor, log2
 from random import random
@@ -13,13 +15,7 @@ import torch.nn.functional as F
 import torchvision
 
 from pathlib import Path
-from utils.utils import *
-from datasets.Datasets import *
-from model.Conv2DMod import *
-from model.Generator import *
-from model.Discriminator import *
-from model.StyleVectorizer import *
-from model.Stylegan import *
+from utils.utils import cycle, image_noise, latent_to_w, styles_def_to_tensor, noise_list, noise, evaluate_in_chunks, mixed_list, gradient_penalty, raise_if_nan, NanException, EMA, default
 
 num_cores = multiprocessing.cpu_count()
 
@@ -29,10 +25,6 @@ EPS = 1e-8
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 # speed up
 cudnn.benchmark = True
-
-
-class NanException(Exception):
-    pass
 
 
 class Trainer():

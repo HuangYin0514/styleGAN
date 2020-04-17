@@ -27,6 +27,10 @@ from pathlib import Path
 device = torch.device("cuda:0" if (torch.cuda.is_available()) else "cpu")
 
 
+class NanException(Exception):
+    pass
+
+
 class EMA():
     def __init__(self, beta):
         super().__init__()

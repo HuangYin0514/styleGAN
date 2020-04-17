@@ -54,7 +54,8 @@ def train_from_folder(data='../../gan/custom_dataset',
     model.set_data_src(data)
 
     train_now = datetime.now().timestamp()
-    for _ in tqdm(range(num_train_steps - model.steps), mininterval=10., desc=f'{name}<{data}>'):
+    for _ in tqdm(range(num_train_steps - model.steps),
+                  mininterval=10., desc=f'{name}<{data}>'):
         # train
         retry_call(model.train, tries=3, exceptions=NanException)
         # stop time
