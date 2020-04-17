@@ -1,31 +1,19 @@
-import os
-import sys
-import math
-import fire
 import json
 from math import floor, log2
 from random import random
 from shutil import rmtree
-from functools import partial
 import multiprocessing
 import torch.backends.cudnn as cudnn
 
 import numpy as np
 import torch
-from torch import nn
 from torch.utils import data
 import torch.nn.functional as F
 
-from torch_optimizer import DiffGrad
-from torch.autograd import grad as torch_grad
-
 import torchvision
-from torchvision import transforms
 
-from PIL import Image
 from pathlib import Path
 from utils.utils import *
-from datasets.Datasets import *
 from datasets.Datasets import *
 from model.Conv2DMod import *
 from model.Generator import *
@@ -299,7 +287,6 @@ class Trainer():
         num_layers = self.GAN.G.num_layers
 
         # latents and noise
-
         latents = noise_list(num_rows**2, num_layers, latent_dim)
         n = image_noise(num_rows**2, image_size)
 
@@ -351,13 +338,7 @@ class Trainer():
                                      nrow=num_rows)
 
     @torch.no_grad()
-    def generate_truncated(self,
-                           S,
-                           G,
-                           style,
-                           noi,
-                           trunc_psi=0.6,
-                           num_image_tiles=8):
+    def generate_truncated(self, S, G, style, noi, trunc_psi=0.6, num_image_tiles=8):
         latent_dim = G.latent_dim
 
         if self.av is None:
@@ -374,8 +355,8 @@ class Trainer():
             w_space.append((tmp, num_layers))
 
         w_styles = styles_def_to_tensor(w_space)
-        generated_images = evaluate_in_chunks(self.batch_size, G, w_styles,
-                                              noi)
+        generated_images = evaluate_in_chunks(
+            self.batch_size, G, w_styles, noi)
         return generated_images.clamp_(0., 1.)
 
     def print_log(self):
