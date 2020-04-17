@@ -15,7 +15,7 @@
                 "--num_train_steps=100",
                 "--image_size=64",
                 "--generate",
-                "--load-from=5"
+                "--load-from=10"
             ]
         }
     ]
