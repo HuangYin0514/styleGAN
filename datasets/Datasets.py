@@ -5,7 +5,6 @@ import torchvision
 from torchvision import transforms
 from PIL import Image
 from pathlib import Path
-from utils.utils import *
 
 EXTS = ['jpg', 'png']
 
