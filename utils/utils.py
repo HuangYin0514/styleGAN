@@ -20,8 +20,6 @@ import torch.nn.functional as F
 from torch_optimizer import DiffGrad
 from torch.autograd import grad as torch_grad
 
-import torchvision
-from torchvision import transforms
 
 from PIL import Image
 from pathlib import Path
