@@ -172,8 +172,7 @@ class Trainer():
         self.GAN.D_opt.zero_grad()
 
         for i in range(self.gradient_accumulate_every):
-            get_latents_fn = mixed_list if random(
-            ) < self.mixed_prob else noise_list
+            get_latents_fn = mixed_list if random() < self.mixed_prob else noise_list
             style = get_latents_fn(batch_size, num_layers, latent_dim)
             noise = image_noise(batch_size, image_size)
 
