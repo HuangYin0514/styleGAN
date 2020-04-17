@@ -1,5 +1,3 @@
-from model.Stylegan import StyleGAN2
-from datasets.Datasets import Dataset
 import json
 from math import floor, log2
 from random import random
@@ -16,6 +14,8 @@ import torchvision
 
 from pathlib import Path
 from utils.utils import cycle, image_noise, latent_to_w, styles_def_to_tensor, noise_list, noise, evaluate_in_chunks, mixed_list, gradient_penalty, raise_if_nan, NanException, EMA, default
+from datasets.Datasets import Dataset
+from model.Stylegan import StyleGAN2
 
 num_cores = multiprocessing.cpu_count()
 
