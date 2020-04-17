@@ -21,8 +21,6 @@ from model.Discriminator import *
 from model.StyleVectorizer import *
 from model.Stylegan import *
 
-# assert torch.cuda.is_available(), 'You need to have an Nvidia GPU with CUDA installed.'
-
 num_cores = multiprocessing.cpu_count()
 
 # constants
