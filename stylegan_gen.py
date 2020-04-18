@@ -126,7 +126,7 @@ tmp2 = nn.repeat(num_rows, 1)
 tt = int(num_layers / 2)
 mixed_latents = [(tmp1, tt), (tmp2, num_layers - tt)]
 
-n = image_noise(num_rows**2, image_size)
+n = torch.FloatTensor(num_rows**2, image_size, image_size, 1).uniform_(0., 1.).to(device)
 
 generated_images = generate_truncated(GAN.SE,
                                       GAN.GE,
