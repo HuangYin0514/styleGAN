@@ -23,25 +23,25 @@ GAN.load_state_dict(torch.load(load_model_name,
 
 # %%
 @torch.no_grad()
-def generate_truncated(self, S, G, style, noi, trunc_psi=0.6, num_image_tiles=8):
+def generate_truncated(S, G, style, noi, trunc_psi=0.6, num_image_tiles=8):
     latent_dim = G.latent_dim
-
-    if self.av is None:
+    av = None
+    if av is None:
         z = noise(2000, latent_dim)
-        samples = evaluate_in_chunks(self.batch_size, S, z).cpu().numpy()
-        self.av = np.mean(samples, axis=0)
-        self.av = np.expand_dims(self.av, axis=0)
+        samples = evaluate_in_chunks(batch_size, S, z).cpu().numpy()
+        av = np.mean(samples, axis=0)
+        av = np.expand_dims(av, axis=0)
 
     w_space = []
     for tensor, num_layers in style:
         tmp = S(tensor)
-        av_torch = torch.from_numpy(self.av).to(device)
+        av_torch = torch.from_numpy(av).to(device)
         tmp = trunc_psi * (tmp - av_torch) + av_torch
         w_space.append((tmp, num_layers))
 
     w_styles = styles_def_to_tensor(w_space)
     generated_images = evaluate_in_chunks(
-        self.batch_size, G, w_styles, noi)
+        batch_size, G, w_styles, noi)
     return generated_images.clamp_(0., 1.)
 
 
@@ -63,19 +63,20 @@ def generate_images(stylizer, generator, latents, noise):
     return generated_images
 
 
+# %%
+
 latent_dim = GAN.G.latent_dim
 image_size = GAN.G.image_size
 num_layers = GAN.G.num_layers
-
 # latents and noise
 latents = noise_list(num_rows**2, num_layers, latent_dim)
 n = image_noise(num_rows**2, image_size)
 
+# %%
+
 # regular
 generated_images = generate_images(GAN.S, GAN.G, latents, n)
 
-
-# %%
 plt.figure(figsize=(10, 10))
 plt.axis("off")
 plt.title("Ori Images")
@@ -86,3 +87,57 @@ plt.imshow(np.transpose(vutils.make_grid(generated_images,
 
 
 # %%
+# moving averages
+generated_images = generate_truncated(GAN.SE,
+                                      GAN.GE,
+                                      latents,
+                                      n,
+                                      trunc_psi=0.6)
+
+plt.figure(figsize=(10, 10))
+plt.axis("off")
+plt.title("moving averages Images")
+plt.imshow(np.transpose(vutils.make_grid(generated_images,
+                                         padding=2,
+                                         normalize=True).detach().numpy(),
+                        (1, 2, 0)))
+
+# %%
+# mixing regularities
+
+
+def tile(a, dim, n_tile):
+    init_dim = a.size(dim)
+    repeat_idx = [1] * a.dim()
+    repeat_idx[dim] = n_tile
+    a = a.repeat(*(repeat_idx))
+    order_index = torch.LongTensor(
+        np.concatenate([
+            init_dim * np.arange(n_tile) + i for i in range(init_dim)
+        ])).to(device)
+    return torch.index_select(a, dim, order_index)
+
+
+nn = noise(num_rows, latent_dim)
+tmp1 = tile(nn, 0, num_rows)
+tmp2 = nn.repeat(num_rows, 1)
+
+tt = int(num_layers / 2)
+mixed_latents = [(tmp1, tt), (tmp2, num_layers - tt)]
+mixed_latents = [(tmp1, 5)]
+
+generated_images = generate_truncated(GAN.SE,
+                                      GAN.GE,
+                                      mixed_latents,
+                                      n,
+                                      trunc_psi=0.6)
+plt.figure(figsize=(10, 10))
+plt.axis("off")
+plt.title("mixing regularities Images")
+plt.imshow(np.transpose(vutils.make_grid(generated_images,
+                                         padding=2,
+                                         normalize=True).detach().numpy(),
+                        (1, 2, 0)))
+
+# %%
+tmp1.shape
