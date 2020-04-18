@@ -103,6 +103,8 @@ plt.imshow(np.transpose(vutils.make_grid(generated_images,
                         (1, 2, 0)))
 
 # %%
+nn = noise(num_rows, latent_dim)
+# %%
 # mixing regularities
 
 
@@ -118,13 +120,13 @@ def tile(a, dim, n_tile):
     return torch.index_select(a, dim, order_index)
 
 
-nn = noise(num_rows, latent_dim)
 tmp1 = tile(nn, 0, num_rows)
 tmp2 = nn.repeat(num_rows, 1)
 
 tt = int(num_layers / 2)
 mixed_latents = [(tmp1, tt), (tmp2, num_layers - tt)]
-mixed_latents = [(tmp1, 5)]
+
+n = image_noise(num_rows**2, image_size)
 
 generated_images = generate_truncated(GAN.SE,
                                       GAN.GE,
@@ -139,5 +141,5 @@ plt.imshow(np.transpose(vutils.make_grid(generated_images,
                                          normalize=True).detach().numpy(),
                         (1, 2, 0)))
 
+
 # %%
-tmp1.shape
