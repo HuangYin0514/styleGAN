@@ -1,11 +1,12 @@
 import torch
 from utils.utils import NanException
+from utils.utils import noise
 
 import numpy as np
 
 
 if __name__ == "__main__":
-    init_dim = 8
-    n_tile = 8
-    t_l = [init_dim * np.arange(n_tile) + i for i in range(init_dim)]
-    print(t_l)
+    a = torch.LongTensor([0, 4])
+    b = torch.Tensor([1, 2, 3, 4, 5, 6, 7])
+    c = torch.index_select(b, 0, a)
+    print(c)
